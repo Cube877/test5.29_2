@@ -2,11 +2,72 @@
 //
 
 #include <iostream>
+#include<opencv.hpp>
+
+using namespace cv;
+using namespace std;
 
 int main()
 {
-    std::cout << "Hello World!\n";
+	VideoCapture cap;
+	
+	cap.open("test.mp4");
+
+	if (!cap.isOpened()) 
+	{
+				cout << "unable to open video!" << endl;
+				return -1;
+	}
+	int cnt = 0;
+
+	Mat frame, tempMat, refMat, resultMat, dispMat;
+	while (1)
+	{
+		cap >> frame;
+		if (frame.empty()) break;
+		if (cnt == 0)
+		{
+			Rect2d r;
+			r = selectROI(frame);
+			tempMat = frame(r);
+			tempMat.copyTo(refMat);
+			destroyAllWindows();
+		}
+		else
+		{
+			int match_method = 0;
+			matchTemplate(frame, refMat, resultMat, match_method);
+
+			normalize(resultMat, resultMat, 0, 1, NORM_MINMAX, -1, Mat());
+
+			double minVal;
+			double maxVal;
+			Point minLoc;
+			Point maxLoc;
+			Point matchLoc;
+
+			minMaxLoc(resultMat, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
+
+			if (match_method == TM_SQDIFF || match_method == TM_SQDIFF_NORMED)
+			{
+				matchLoc = minLoc;
+			}
+			else
+			{
+				matchLoc = maxLoc;
+			}
+			frame.copyTo(dispMat);
+			rectangle(dispMat, matchLoc, Point(matchLoc.x + refMat.cols, matchLoc.y + refMat.rows), Scalar(255, 255, 0), 2, 8, 0);
+
+			imshow("template", refMat);
+			imshow("dispMat", dispMat);
+		}
+		cnt++;
+	}
+	waitKey(0);
+	return 0;
 }
+
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
 // 调试程序: F5 或调试 >“开始调试”菜单
